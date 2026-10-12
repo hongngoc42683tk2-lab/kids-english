@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>English For Kids</title>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial,sans-serif;
+}
+
+body{
+background:linear-gradient(
+135deg,
+#74ebd5,
+#ACB6E5
+);
+min-height:100vh;
+padding:15px;
+text-align:center;
+}
+
+h1{
+color:white;
+margin-bottom:15px;
+font-size:42px;
+}
+
+.topbar{
+display:flex;
+justify-content:center;
+gap:25px;
+flex-wrap:wrap;
+margin-bottom:15px;
+font-size:22px;
+font-weight:bold;
+color:white;
+}
+
+select{
+padding:12px;
+font-size:20px;
+border-radius:10px;
+border:none;
+margin-bottom:15px;
+}
+
+button{
+padding:12px 20px;
+border:none;
+border-radius:12px;
+cursor:pointer;
+font-size:20px;
+margin:5px;
+}
+
+.listenBtn{
+background:#2196F3;
+color:white;
+}
+
+.reportBtn{
+background:#673AB7;
+color:white;
+}
+
+#message{
+font-size:34px;
+font-weight:bold;
+height:60px;
+color:white;
+margin:15px;
+}
+
+.cards{
+display:flex;
+justify-content:center;
+gap:25px;
+flex-wrap:wrap;
+}
+
+.card{
+width:320px;
+background:white;
+border-radius:20px;
+overflow:hidden;
+cursor:pointer;
+box-shadow:
+0 6px 20px rgba(0,0,0,.15);
+transition:.2s;
+}
+
+.card:hover{
+transform:scale(1.03);
+}
+
+.card img{
+width:100%;
+height:280px;
+object-fit:cover;
+background:#eee;
+}
+
+.word{
+padding:15px;
+font-size:28px;
+font-weight:bold;
+}
+
+.correct{
+border:8px solid #4CAF50;
+}
+
+.wrong{
+border:8px solid #F44336;
+}
+
+.modal{
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.6);
+justify-content:center;
+align-items:center;
+}
+
+.modalContent{
+background:white;
+padding:20px;
+border-radius:20px;
+width:90%;
+max-width:700px;
+max-height:80vh;
+overflow:auto;
+text-align:left;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>🎈 English For Kids</h1>
+
+<div class="topbar">
+
+<div>
+⭐ Score:
+<span id="score">0</span>
+</div>
+
+<div>
+🏆 Best:
+<span id="best">0</span>
+</div>
+
+</div>
+
+<select id="categorySelect">
+
+<option value="All">
+🌎 All Topics
+</option>
+
+<option value="Fruit">
+🍎 Fruits
+</option>
+
+<option value="Animal">
+🐶 Animals
+</option>
+
+<option value="Vehicle">
+🚗 Vehicles
+</option>
+
+</select>
+
+<br>
+
+<button
+class="listenBtn"
+onclick="speakCurrent()">
+
+🔊 Listen
+
+</button>
+
+<button
+class="reportBtn"
+onclick="showReport()">
+
+📊 Progress
+
+</button>
+
+<div id="message"></div>
+
+<div class="cards">
+
+<div
+id="card0"
+class="card"
+onclick="choose(0)">
+
+<img id="img0">
+
+<div
+id="word0"
+class="word">
+</div>
+
+</div>
+
+<div
+id="card1"
+class="card"
+onclick="choose(1)">
+
+<img id="img1">
+
+<div
+id="word1"
+class="word">
+</div>
+
+</div>
+
+</div>
+
+<div
+id="reportModal"
+class="modal">
+
+<div class="modalContent">
+
+<h2>
+📊 Learning Report
+</h2>
+
+<br>
+
+<div id="reportBody"></div>
+
+<br>
+
+<button onclick="closeReport()">
+Close
+</button>
+
+</div>
+</div>
+
+<script>
+
+const words = [
+
+{
+word:"Apple",
+category:"Fruit",
+image:"images/apple.jpg"
+},
+
+{
+word:"Orange",
+category:"Fruit",
+image:"images/orange.jpg"
+},
+
+{
+word:"Banana",
+category:"Fruit",
+image:"images/banana.jpg"
+},
+
+{
+word:"Dog",
+category:"Animal",
+image:"images/dog.jpg"
+},
+
+{
+word:"Cat",
+category:"Animal",
+image:"images/cat.jpg"
+},
+
+{
+word:"Lion",
+category:"Animal",
+image:"images/lion.jpg"
+},
+
+{
+word:"Car",
+category:"Vehicle",
+image:"images/car.jpg"
+},
+
+{
+word:"Bus",
+category:"Vehicle",
+image:"images/bus.jpg"
+},
+
+{
+word:"Train",
+category:"Vehicle",
+image:"images/train.jpg"
+}
+
+];
+
+let currentCategory = "All";
+let current;
+let correct = 0;
+let score = 0;
+
+let stats =
+JSON.parse(
+localStorage.getItem("wordStats")
+|| "{}"
+);
+
+let best =
+Number(
+localStorage.getItem("best")
+|| 0
+);
+
+document.getElementById(
+"best"
+).innerText = best;
+
+document
+.getElementById("categorySelect")
+.addEventListener(
+"change",
+function(){
+
+currentCategory =
+this.value;
+
+newQuestion();
+
+}
+);
+
+function saveStats(){
+
+localStorage.setItem(
+"wordStats",
+JSON.stringify(stats)
+);
+
+}
+
+function record(word,isCorrect){
+
+if(!stats[word]){
+
+stats[word]={
+right:0,
+wrong:0
+};
+
+}
+
+if(isCorrect){
+
+stats[word].right++;
+
+}else{
+
+stats[word].wrong++;
+
+}
+
+saveStats();
+
+}
+
+function getCurrentWords(){
+
+if(currentCategory==="All"){
+
+return words;
+
+}
+
+return words.filter(
+w=>w.category===currentCategory
+);
+
+}
+
+function getWeakWords(){
+
+const activeWords =
+getCurrentWords();
+
+return activeWords.filter(w=>{
+
+const s = stats[w.word];
+
+if(!s)
+return true;
+
+return s.wrong >
+s.right;
+
+});
+
+}
+
+function pickTarget(){
+
+const weakWords =
+getWeakWords();
+
+if(
+
+weakWords.length>0 &&
+Math.random()<0.7
+
+){
+
+return weakWords[
+Math.floor(
+Math.random()*
+weakWords.length
+)
+];
+
+}
+
+const activeWords =
+getCurrentWords();
+
+return activeWords[
+Math.floor(
+Math.random()*
+activeWords.length
+)
+];
+
+}
+
+function speakCurrent(){
+
+speechSynthesis.cancel();
+
+const speech =
+new SpeechSynthesisUtterance(
+current.word
+);
+
+speech.lang =
+"en-US";
+
+speech.rate =
+0.85;
+
+speechSynthesis.speak(
+speech
+);
+
+}
+
+function newQuestion(){
+
+message.innerHTML="";
+
+card0.className="card";
+card1.className="card";
+
+const activeWords =
+getCurrentWords();
+
+if(activeWords.length<2){
+
+alert(
+"Chủ đề này cần ít nhất 2 từ."
+);
+
+return;
+
+}
+
+let target =
+pickTarget();
+
+let wrong;
+
+do{
+
+wrong=
+activeWords[
+Math.floor(
+Math.random()*
+activeWords.length
+)
+];
+
+}
+while(
+wrong.word===
+target.word
+);
+
+const options =
+[target,wrong];
+
+if(Math.random()>0.5){
+
+options.reverse();
+correct=1;
+
+}else{
+
+correct=0;
+
+}
+
+current=target;
+
+img0.src =
+options[0].image;
+
+img1.src =
+options[1].image;
+
+word0.innerText =
+options[0].word;
+
+word1.innerText =
+options[1].word;
+
+setTimeout(
+speakCurrent,
+500
+);
+
+}
+
+function choose(index){
+
+if(index===correct){
+
+record(
+current.word,
+true
+);
+
+score++;
+
+document
+.getElementById("score")
+.innerText=
+score;
+
+if(score>best){
+
+best=score;
+
+localStorage.setItem(
+"best",
+best
+);
+
+document
+.getElementById("best")
+.innerText=
+best;
+
+}
+
+document
+.getElementById(
+"card"+index
+)
+.classList.add(
+"correct"
+);
+
+message.innerHTML =
+"🎉 Great Job!";
+
+setTimeout(
+newQuestion,
+1500
+);
+
+}else{
+
+record(
+current.word,
+false
+);
+
+document
+.getElementById(
+"card"+index
+)
+.classList.add(
+"wrong"
+);
+
+message.innerHTML =
+"❌ Try Again";
+
+setTimeout(
+speakCurrent,
+500
+);
+
+}
+
+}
+
+function showReport(){
+
+let html="";
+
+Object.keys(stats)
+.sort()
+.forEach(word=>{
+
+const s = stats[word];
+
+const total =
+s.right+s.wrong;
+
+const rate =
+Math.round(
+s.right*100/total
+);
+
+let level="🔴";
+
+if(rate>=80)
+level="🟢";
+
+else if(rate>=50)
+level="🟡";
+
+html +=
+
+`<p style="margin:10px;">
+
+${level}
+
+<b>${word}</b>
+
+✅ ${s.right}
+
+❌ ${s.wrong}
+
+(${rate}%)
+
+</p>`;
+
+});
+
+if(html===""){
+
+html=
+"No learning data yet.";
+
+}
+
+document
+.getElementById(
+"reportBody"
+)
+.innerHTML=html;
+
+document
+.getElementById(
+"reportModal"
+)
+.style.display=
+"flex";
+
+}
+
+function closeReport(){
+
+document
+.getElementById(
+"reportModal"
+)
+.style.display=
+"none";
+
+}
+
+newQuestion();
+
+</script>
+
+</body>
+</html>
